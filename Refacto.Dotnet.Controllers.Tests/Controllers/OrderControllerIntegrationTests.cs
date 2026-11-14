@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,10 +39,6 @@ namespace Refacto.DotNet.Controllers.Tests.Controllers
                     {
                         _ = options.UseInMemoryDatabase($"InMemoryDbForTesting-{GetType()}");
                     });
-                    _ = services.AddScoped((_serviceProvider) => _mockNotificationService.Object);
-
-
-                    //ServiceProvider sp = services.BuildServiceProvider();
                 });
             });
 
@@ -70,6 +67,19 @@ namespace Refacto.DotNet.Controllers.Tests.Controllers
         }
 
         [Fact]
+        public async Task ProcessOrder_WhenOrderDoesNotExist_ShouldReturnNotFound()
+        {
+            HttpClient client = _factory.CreateClient();
+
+            HttpResponseMessage response = await client.PostAsync("/orders/1234/processOrder", null);
+
+            Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+            ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+            Assert.NotNull(problem);
+            Assert.Equal((int)System.Net.HttpStatusCode.NotFound, problem.Status);
+        }
+
+        [Fact]
         public async Task ProcessOrder_WhenProductTypeIsUnknown_ShouldReturnUnprocessableEntity()
         {
             HttpClient client = _factory.CreateClient();
@@ -87,6 +97,10 @@ namespace Refacto.DotNet.Controllers.Tests.Controllers
             HttpResponseMessage response = await client.PostAsync($"/orders/{order.Id}/processOrder", null);
 
             Assert.Equal(System.Net.HttpStatusCode.UnprocessableEntity, response.StatusCode);
+            ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+            Assert.NotNull(problem);
+            Assert.Equal((int)System.Net.HttpStatusCode.UnprocessableEntity, problem.Status);
+            Assert.Contains("UNKNOWN", problem.Detail);
         }
 
         private static Order CreateOrder(HashSet<Product> products)

@@ -1,59 +1,102 @@
-﻿using Refacto.DotNet.Controllers.Database.Context;
-using Refacto.DotNet.Controllers.Entities;
+﻿using Refacto.DotNet.Controllers.Entities;
+using Refacto.DotNet.Controllers.Exceptions;
 using Refacto.DotNet.Controllers.Interfaces;
 
 namespace Refacto.DotNet.Controllers.Services
 {
+    /// <summary>Applies product-specific stock and availability rules.</summary>
     public class ProductService
     {
         private readonly INotificationService _notificationService;
-        private readonly AppDbContext _appDbContext;
 
-        public ProductService(INotificationService notificationService, AppDbContext appDbContext)
+        /// <summary>Creates a product service with its notification-delivery dependency.</summary>
+        /// <param name="notificationService">Service used to deliver product notifications.</param>
+        public ProductService(INotificationService notificationService)
         {
             _notificationService = notificationService;
-            _appDbContext = appDbContext;
         }
 
-        public void NotifyDelay(int leadTime, Product product)
+        /// <summary>Applies the business rule associated with a product's type.</summary>
+        /// <param name="product">Product to process.</param>
+        /// <exception cref="UnknownProductTypeException">The product type is not recognized.</exception>
+        /// <exception cref="InvalidProductDataException">Required data for the product type is missing.</exception>
+        public void ProcessProduct(Product product)
         {
-            product.LeadTime = leadTime;
-            _ = _appDbContext.SaveChanges();
-            _notificationService.SendDelayNotification(leadTime, product.Name);
-        }
-
-        public void HandleSeasonalProduct(Product product)
-        {
-            if (DateTime.Now.AddDays(product.LeadTime) > product.SeasonEndDate)
+            switch (product.Type)
             {
-                _notificationService.SendOutOfStockNotification(product.Name);
-                product.Available = 0;
-                _ = _appDbContext.SaveChanges();
+                case "NORMAL":
+                    ProcessNormalProduct(product);
+                    break;
+                case "SEASONAL":
+                    ProcessSeasonalProduct(product);
+                    break;
+                case "EXPIRABLE":
+                    ProcessExpirableProduct(product);
+                    break;
+                default:
+                    throw new UnknownProductTypeException(product.Type);
             }
-            else if (product.SeasonStartDate > DateTime.Now)
+        }
+
+        private void ProcessNormalProduct(Product product)
+        {
+            if (product.Available > 0)
             {
-                _notificationService.SendOutOfStockNotification(product.Name);
-                _ = _appDbContext.SaveChanges();
+                product.Available--;
+            }
+            else if (product.LeadTime > 0)
+            {
+                _notificationService.SendDelayNotification(product.LeadTime, GetProductName(product));
+            }
+        }
+
+        private void ProcessSeasonalProduct(Product product)
+        {
+            DateTime seasonStartDate = product.SeasonStartDate
+                ?? throw new InvalidProductDataException("A seasonal product must have a season start date.");
+            DateTime seasonEndDate = product.SeasonEndDate
+                ?? throw new InvalidProductDataException("A seasonal product must have a season end date.");
+            DateTime today = DateTime.Now.Date;
+
+            if (product.Available > 0 && today > seasonStartDate.Date && today < seasonEndDate.Date)
+            {
+                product.Available--;
+            }
+            else if (DateTime.Now.AddDays(product.LeadTime) > seasonEndDate)
+            {
+                _notificationService.SendOutOfStockNotification(GetProductName(product));
+                product.Available = 0;
+            }
+            else if (seasonStartDate > DateTime.Now)
+            {
+                _notificationService.SendOutOfStockNotification(GetProductName(product));
+            }
+            else if (product.LeadTime > 0)
+            {
+                _notificationService.SendDelayNotification(product.LeadTime, GetProductName(product));
+            }
+        }
+
+        private void ProcessExpirableProduct(Product product)
+        {
+            DateTime expiryDate = product.ExpiryDate
+                ?? throw new InvalidProductDataException("An expirable product must have an expiry date.");
+
+            if (product.Available > 0 && expiryDate > DateTime.Now.Date)
+            {
+                product.Available--;
             }
             else
             {
-                NotifyDelay(product.LeadTime, product);
+                _notificationService.SendExpirationNotification(GetProductName(product), expiryDate);
+                product.Available = 0;
             }
         }
 
-        public void HandleExpiredProduct(Product product)
+        private static string GetProductName(Product product)
         {
-            if (product.Available > 0 && product.ExpiryDate > DateTime.Now)
-            {
-                product.Available -= 1;
-                _ = _appDbContext.SaveChanges();
-            }
-            else
-            {
-                _notificationService.SendExpirationNotification(product.Name, (DateTime)product.ExpiryDate);
-                product.Available = 0;
-                _ = _appDbContext.SaveChanges();
-            }
+            return product.Name
+                ?? throw new InvalidProductDataException("A product must have a name to send a notification.");
         }
     }
 }

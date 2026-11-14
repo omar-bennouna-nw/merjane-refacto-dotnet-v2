@@ -1,80 +1,33 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Refacto.DotNet.Controllers.Database.Context;
 using Refacto.DotNet.Controllers.Dtos.Product;
 using Refacto.DotNet.Controllers.Services;
 
 namespace Refacto.DotNet.Controllers.Controllers
 {
+    /// <summary>Exposes HTTP endpoints for order operations.</summary>
     [ApiController]
     [Route("orders")]
     public class OrderController : ControllerBase
     {
-        private readonly ProductService _productService;
-        private readonly AppDbContext _appDbContext;
+        private readonly OrderService _orderService;
 
-        public OrderController(ProductService productService, AppDbContext appDbContext)
+        /// <summary>Creates an order controller.</summary>
+        /// <param name="orderService">Service that processes orders.</param>
+        public OrderController(OrderService orderService)
         {
-            _productService = productService;
-            _appDbContext = appDbContext;
+            _orderService = orderService;
         }
 
+        /// <summary>Processes the products in an order.</summary>
+        /// <param name="orderId">Identifier of the order to process.</param>
+        /// <returns>The identifier of the processed order.</returns>
         [HttpPost("{orderId}/processOrder")]
-        [ProducesResponseType(200)]
+        [ProducesResponseType(typeof(ProcessOrderResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public ActionResult<ProcessOrderResponse> ProcessOrder(long orderId)
         {
-            Entities.Order? order = _appDbContext.Orders
-                .Include(o => o.Items)
-                .SingleOrDefault(o => o.Id == orderId);
-
-            ICollection<Entities.Product>? products = order.Items;
-
-            foreach (Entities.Product item in products)
-            {
-                if (item.Type == "NORMAL")
-                {
-                    if (item.Available > 0)
-                    {
-                        item.Available -= 1;
-                        _appDbContext.Entry(item).State = EntityState.Modified;
-                        _ = _appDbContext.SaveChanges();
-
-                    }
-                    else
-                    {
-                        int leadTime = item.LeadTime;
-                        if (leadTime > 0)
-                        {
-                            _productService.NotifyDelay(leadTime, item);
-                        }
-                    }
-                }
-                else if (item.Type == "SEASONAL")
-                {
-                    if (DateTime.Now.Date > item.SeasonStartDate && DateTime.Now.Date < item.SeasonEndDate && item.Available > 0)
-                    {
-                        item.Available -= 1;
-                        _ = _appDbContext.SaveChanges();
-                    }
-                    else
-                    {
-                        _productService.HandleSeasonalProduct(item);
-                    }
-                }
-                else if (item.Type == "EXPIRABLE")
-                {
-                    if (item.Available > 0 && item.ExpiryDate > DateTime.Now.Date)
-                    {
-                        item.Available -= 1;
-                        _ = _appDbContext.SaveChanges();
-                    }
-                    else
-                    {
-                        _productService.HandleExpiredProduct(item);
-                    }
-                }
-            }
-
+            var order = _orderService.ProcessOrder(orderId);
             return new ProcessOrderResponse(order.Id);
         }
     }
