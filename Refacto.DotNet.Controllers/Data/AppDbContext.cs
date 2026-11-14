@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Refacto.DotNet.Controllers.Entities;
 
-namespace Refacto.DotNet.Controllers.Database.Context
+namespace Refacto.DotNet.Controllers.Data
 {
     public class AppDbContext : DbContext
     {

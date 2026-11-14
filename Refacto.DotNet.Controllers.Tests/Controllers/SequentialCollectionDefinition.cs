@@ -1,4 +1,4 @@
-﻿namespace Refacto.Dotnet.Controllers.Tests.Controllers
+﻿namespace Refacto.DotNet.Controllers.Tests.Controllers
 {
     [CollectionDefinition("Sequential", DisableParallelization = true)]
     public class SequentialCollectionDefinition

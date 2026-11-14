@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Refacto.DotNet.Controllers.Database.Context;
+using Refacto.DotNet.Controllers.Data;
 using Refacto.DotNet.Controllers.Filters;
 using Refacto.DotNet.Controllers.Interfaces;
 using Refacto.DotNet.Controllers.Services;

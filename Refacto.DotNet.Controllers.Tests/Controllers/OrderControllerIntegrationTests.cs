@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Refacto.DotNet.Controllers.Database.Context;
-using Refacto.DotNet.Controllers.Dtos.Product;
+using Refacto.DotNet.Controllers.Data;
+using Refacto.DotNet.Controllers.Dtos.Orders;
 using Refacto.DotNet.Controllers.Entities;
 using Refacto.DotNet.Controllers.Interfaces;
 

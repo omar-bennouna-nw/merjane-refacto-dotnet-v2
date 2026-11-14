@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Refacto.DotNet.Controllers.Dtos.Product;
+using Refacto.DotNet.Controllers.Dtos.Orders;
 using Refacto.DotNet.Controllers.Services;
 
 namespace Refacto.DotNet.Controllers.Controllers

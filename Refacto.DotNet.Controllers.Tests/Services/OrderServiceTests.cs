@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using Refacto.DotNet.Controllers.Database.Context;
+using Refacto.DotNet.Controllers.Data;
 using Refacto.DotNet.Controllers.Entities;
 using Refacto.DotNet.Controllers.Exceptions;
 using Refacto.DotNet.Controllers.Interfaces;
