@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Refacto.DotNet.Controllers.Database.Context;
 using Refacto.DotNet.Controllers.Dtos.Product;
-using Refacto.DotNet.Controllers.Services.Impl;
+using Refacto.DotNet.Controllers.Services;
 
 namespace Refacto.DotNet.Controllers.Controllers
 {
@@ -26,9 +26,6 @@ namespace Refacto.DotNet.Controllers.Controllers
             Entities.Order? order = _appDbContext.Orders
                 .Include(o => o.Items)
                 .SingleOrDefault(o => o.Id == orderId);
-            Console.WriteLine(order);
-
-            //List<long> ids = new() { orderId };
 
             ICollection<Entities.Product>? products = order.Items;
 
@@ -54,7 +51,7 @@ namespace Refacto.DotNet.Controllers.Controllers
                 }
                 else if (item.Type == "SEASONAL")
                 {
-                    if (DateTime.Now.Date > item.SeasonStartDate && DateTime.Now.Date < item.SeasonEndDate && item      .Available > 0)
+                    if (DateTime.Now.Date > item.SeasonStartDate && DateTime.Now.Date < item.SeasonEndDate && item.Available > 0)
                     {
                         item.Available -= 1;
                         _ = _appDbContext.SaveChanges();

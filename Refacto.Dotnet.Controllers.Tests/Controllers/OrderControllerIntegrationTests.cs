@@ -4,18 +4,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Refacto.DotNet.Controllers.Database.Context;
 using Refacto.DotNet.Controllers.Entities;
-using Refacto.DotNet.Controllers.Services;
+using Refacto.DotNet.Controllers.Interfaces;
 
-namespace Refacto.Dotnet.Controllers.Tests.Controllers
+namespace Refacto.DotNet.Controllers.Tests.Controllers
 {
     [Collection("Sequential")]
-    public class MyControllerIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+    public class OrderControllerIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
     {
         private readonly WebApplicationFactory<Program> _factory;
         private readonly AppDbContext _context;
         private readonly Mock<INotificationService> _mockNotificationService;
 
-        public MyControllerIntegrationTests(WebApplicationFactory<Program> factory)
+        public OrderControllerIntegrationTests(WebApplicationFactory<Program> factory)
         {
             _mockNotificationService = new Mock<INotificationService>();
 
@@ -36,7 +36,7 @@ namespace Refacto.Dotnet.Controllers.Tests.Controllers
                     {
                         _ = options.UseInMemoryDatabase($"InMemoryDbForTesting-{GetType()}");
                     });
-                    _ = services.AddScoped((_sp) => _mockNotificationService.Object);
+                    _ = services.AddScoped((_serviceProvider) => _mockNotificationService.Object);
 
 
                     //ServiceProvider sp = services.BuildServiceProvider();
