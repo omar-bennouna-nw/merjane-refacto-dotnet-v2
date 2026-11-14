@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
+﻿using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Refacto.DotNet.Controllers.Database.Context;
+using Refacto.DotNet.Controllers.Dtos.Product;
 using Refacto.DotNet.Controllers.Entities;
 using Refacto.DotNet.Controllers.Interfaces;
 
@@ -50,23 +52,41 @@ namespace Refacto.DotNet.Controllers.Tests.Controllers
         }
 
         [Fact]
-        public async Task ProcessOrderShouldReturn()
+        public async Task ProcessOrder_ShouldReturnOrderIdInResponseBody()
         {
             HttpClient client = _factory.CreateClient();
-
-            List<Product> allProducts = CreateProducts();
-            HashSet<Product> orderItems = new(allProducts);
-            Order order = CreateOrder(orderItems);
-            await _context.Products.AddRangeAsync(allProducts);
+            List<Product> products = CreateProducts();
+            Order order = CreateOrder(new HashSet<Product>(products));
+            await _context.Products.AddRangeAsync(products);
             _ = await _context.Orders.AddAsync(order);
             _ = await _context.SaveChangesAsync();
-            _context.ChangeTracker.Clear();
 
             HttpResponseMessage response = await client.PostAsync($"/orders/{order.Id}/processOrder", null);
-            _ = response.EnsureSuccessStatusCode();
 
-            Order? resultOrder = await _context.Orders.FindAsync(order.Id);
-            Assert.Equal(resultOrder.Id, order.Id);
+            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+            ProcessOrderResponse? responseBody = await response.Content.ReadFromJsonAsync<ProcessOrderResponse>();
+            Assert.NotNull(responseBody);
+            Assert.Equal(order.Id, responseBody.Id);
+        }
+
+        [Fact]
+        public async Task ProcessOrder_WhenProductTypeIsUnknown_ShouldReturnUnprocessableEntity()
+        {
+            HttpClient client = _factory.CreateClient();
+            Product product = new()
+            {
+                Name = "Unknown product",
+                Type = "UNKNOWN",
+                Available = 1
+            };
+            Order order = CreateOrder(new HashSet<Product> { product });
+            _ = await _context.Products.AddAsync(product);
+            _ = await _context.Orders.AddAsync(order);
+            _ = await _context.SaveChangesAsync();
+
+            HttpResponseMessage response = await client.PostAsync($"/orders/{order.Id}/processOrder", null);
+
+            Assert.Equal(System.Net.HttpStatusCode.UnprocessableEntity, response.StatusCode);
         }
 
         private static Order CreateOrder(HashSet<Product> products)
