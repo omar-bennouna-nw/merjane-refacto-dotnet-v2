@@ -5,53 +5,53 @@ namespace Refacto.DotNet.Controllers.Services.Impl
 {
     public class ProductService
     {
-        private readonly INotificationService _ns;
-        private readonly AppDbContext _ctx;
+        private readonly INotificationService _notificationService;
+        private readonly AppDbContext _appDbContext;
 
-        public ProductService(INotificationService ns, AppDbContext ctx)
+        public ProductService(INotificationService notificationService, AppDbContext appDbContext)
         {
-            _ns = ns;
-            _ctx = ctx;
+            _notificationService = notificationService;
+            _appDbContext = appDbContext;
         }
 
-        public void NotifyDelay(int leadTime, Product p)
+        public void NotifyDelay(int leadTime, Product product)
         {
-            p.LeadTime = leadTime;
-            _ = _ctx.SaveChanges();
-            _ns.SendDelayNotification(leadTime, p.Name);
+            product.LeadTime = leadTime;
+            _ = _appDbContext.SaveChanges();
+            _notificationService.SendDelayNotification(leadTime, product.Name);
         }
 
-        public void HandleSeasonalProduct(Product p)
+        public void HandleSeasonalProduct(Product product)
         {
-            if (DateTime.Now.AddDays(p.LeadTime) > p.SeasonEndDate)
+            if (DateTime.Now.AddDays(product.LeadTime) > product.SeasonEndDate)
             {
-                _ns.SendOutOfStockNotification(p.Name);
-                p.Available = 0;
-                _ = _ctx.SaveChanges();
+                _notificationService.SendOutOfStockNotification(product.Name);
+                product.Available = 0;
+                _ = _appDbContext.SaveChanges();
             }
-            else if (p.SeasonStartDate > DateTime.Now)
+            else if (product.SeasonStartDate > DateTime.Now)
             {
-                _ns.SendOutOfStockNotification(p.Name);
-                _ = _ctx.SaveChanges();
+                _notificationService.SendOutOfStockNotification(product.Name);
+                _ = _appDbContext.SaveChanges();
             }
             else
             {
-                NotifyDelay(p.LeadTime, p);
+                NotifyDelay(product.LeadTime, product);
             }
         }
 
-        public void HandleExpiredProduct(Product p)
+        public void HandleExpiredProduct(Product product)
         {
-            if (p.Available > 0 && p.ExpiryDate > DateTime.Now)
+            if (product.Available > 0 && product.ExpiryDate > DateTime.Now)
             {
-                p.Available -= 1;
-                _ = _ctx.SaveChanges();
+                product.Available -= 1;
+                _ = _appDbContext.SaveChanges();
             }
             else
             {
-                _ns.SendExpirationNotification(p.Name, (DateTime)p.ExpiryDate);
-                p.Available = 0;
-                _ = _ctx.SaveChanges();
+                _notificationService.SendExpirationNotification(product.Name, (DateTime)product.ExpiryDate);
+                product.Available = 0;
+                _ = _appDbContext.SaveChanges();
             }
         }
     }

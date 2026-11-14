@@ -39,7 +39,7 @@ namespace Refacto.Dotnet.Controllers.Tests.Controllers
                     _ = services.AddScoped((_sp) => _mockNotificationService.Object);
 
 
-                    ServiceProvider sp = services.BuildServiceProvider();
+                    //ServiceProvider sp = services.BuildServiceProvider();
                 });
             });
 
