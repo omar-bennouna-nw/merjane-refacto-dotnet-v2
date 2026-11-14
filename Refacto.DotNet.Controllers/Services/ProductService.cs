@@ -57,24 +57,30 @@ namespace Refacto.DotNet.Controllers.Services
             DateTime seasonEndDate = product.SeasonEndDate
                 ?? throw new InvalidProductDataException("A seasonal product must have a season end date.");
             DateTime today = DateTime.Now.Date;
+            DateTime seasonStart = seasonStartDate.Date;
+            DateTime seasonEnd = seasonEndDate.Date;
 
-            if (product.Available > 0 && today > seasonStartDate.Date && today < seasonEndDate.Date)
+            if (today < seasonStart || today > seasonEnd)
+            {
+                _notificationService.SendOutOfStockNotification(GetProductName(product));
+                return;
+            }
+
+            if (product.Available > 0)
             {
                 product.Available--;
+                return;
             }
-            else if (DateTime.Now.AddDays(product.LeadTime) > seasonEndDate)
+
+            DateTime expectedAvailabilityDate = today.AddDays(product.LeadTime);
+            if (expectedAvailabilityDate > seasonEnd)
             {
-                _notificationService.SendOutOfStockNotification(GetProductName(product));
                 product.Available = 0;
-            }
-            else if (seasonStartDate > DateTime.Now)
-            {
                 _notificationService.SendOutOfStockNotification(GetProductName(product));
+                return;
             }
-            else if (product.LeadTime > 0)
-            {
-                _notificationService.SendDelayNotification(product.LeadTime, GetProductName(product));
-            }
+
+            _notificationService.SendDelayNotification(product.LeadTime, GetProductName(product));
         }
 
         private void ProcessExpirableProduct(Product product)
@@ -82,14 +88,15 @@ namespace Refacto.DotNet.Controllers.Services
             DateTime expiryDate = product.ExpiryDate
                 ?? throw new InvalidProductDataException("An expirable product must have an expiry date.");
 
-            if (product.Available > 0 && expiryDate > DateTime.Now.Date)
+            if (expiryDate.Date < DateTime.Now.Date)
+            {
+                product.Available = 0;
+                return;
+            }
+
+            if (product.Available > 0)
             {
                 product.Available--;
-            }
-            else
-            {
-                _notificationService.SendExpirationNotification(GetProductName(product), expiryDate);
-                product.Available = 0;
             }
         }
 

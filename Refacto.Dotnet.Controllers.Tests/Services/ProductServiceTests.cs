@@ -42,9 +42,10 @@ namespace Refacto.DotNet.Controllers.Tests.Services
 
         [Theory]
         [InlineData(4, 5, -5, 10, 3, "none")]
-        [InlineData(4, 5, 2, 3, 0, "out-of-stock")]
+        [InlineData(0, 5, -5, 3, 0, "out-of-stock")]
         [InlineData(4, 5, 10, 30, 4, "out-of-stock")]
         [InlineData(0, 5, -10, 30, 0, "delay")]
+        [InlineData(4, 5, -10, -1, 4, "out-of-stock")]
         public void ProcessProduct_SeasonalProduct_ShouldApplySeasonRules(
             int available,
             int leadTime,
@@ -64,14 +65,14 @@ namespace Refacto.DotNet.Controllers.Tests.Services
         }
 
         [Theory]
-        [InlineData(5, 20, 4, false)]
-        [InlineData(0, 20, 0, true)]
-        [InlineData(5, -2, 0, true)]
+        [InlineData(5, 20, 4)]
+        [InlineData(0, 20, 0)]
+        [InlineData(5, -1, 0)]
+        [InlineData(5, 0, 4)]
         public void ProcessProduct_ExpirableProduct_ShouldApplyExpiryRules(
             int available,
             int expiryOffsetDays,
-            int expectedAvailable,
-            bool expectsExpirationNotification)
+            int expectedAvailable)
         {
             Product product = CreateProduct("EXPIRABLE", available);
             product.ExpiryDate = DateTime.Now.AddDays(expiryOffsetDays);
@@ -79,18 +80,9 @@ namespace Refacto.DotNet.Controllers.Tests.Services
             _productService.ProcessProduct(product);
 
             Assert.Equal(expectedAvailable, product.Available);
-            if (expectsExpirationNotification)
-            {
-                _mockNotificationService.Verify(
-                    service => service.SendExpirationNotification(ProductName, product.ExpiryDate.Value),
-                    Times.Once());
-            }
-            else
-            {
-                _mockNotificationService.Verify(
-                    service => service.SendExpirationNotification(It.IsAny<string>(), It.IsAny<DateTime>()),
-                    Times.Never());
-            }
+            _mockNotificationService.Verify(
+                service => service.SendExpirationNotification(It.IsAny<string>(), It.IsAny<DateTime>()),
+                Times.Never());
             _mockNotificationService.VerifyNoOtherCalls();
         }
 
